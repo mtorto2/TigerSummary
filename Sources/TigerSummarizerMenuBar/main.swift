@@ -87,7 +87,22 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webViewReady = true
         flushPendingScripts()
-        showReady()
+        waitForReactBridge(attempt: 0)
+    }
+
+    private func waitForReactBridge(attempt: Int) {
+        webView.evaluateJavaScript("Boolean(window.TigerSummary)") { [weak self] result, _ in
+            guard let self else { return }
+            if let isReady = result as? Bool, isReady {
+                self.showReady()
+            } else if attempt < 20 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    self.waitForReactBridge(attempt: attempt + 1)
+                }
+            } else {
+                self.showWebFallback("React viewer loaded, but the TigerSummary bridge did not initialize.")
+            }
+        }
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -184,13 +199,18 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
     }
 
     private func loadWebApp() {
-        let projectDir = Self.projectDirectory()
-        let indexURL = projectDir
+        let bundledIndexURL = Bundle.main.resourceURL?
+            .appendingPathComponent("web")
+            .appendingPathComponent("index.html")
+        let projectIndexURL = Self.projectDirectory()
             .appendingPathComponent("build")
             .appendingPathComponent("web")
             .appendingPathComponent("index.html")
+        let indexURL = [bundledIndexURL, projectIndexURL]
+            .compactMap { $0 }
+            .first { FileManager.default.fileExists(atPath: $0.path) }
 
-        if FileManager.default.fileExists(atPath: indexURL.path) {
+        if let indexURL {
             webView.loadFileURL(indexURL, allowingReadAccessTo: indexURL.deletingLastPathComponent())
         } else {
             let fallback = """
@@ -201,6 +221,17 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
             """
             webView.loadHTMLString(fallback, baseURL: nil)
         }
+    }
+
+    private func showWebFallback(_ message: String) {
+        let escaped = message
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+        let fallback = """
+        document.body.innerHTML = '<main style="min-height:100vh;margin:0;padding:24px;background:#09070d;color:#f0edf5;font-family:-apple-system"><h1 style="color:#fddb3a">TigerSummarizer</h1><p>\(escaped)</p><p>Try rebuilding with <code>./scripts/package_menubar_app.sh</code>.</p></main>';
+        """
+        webView.evaluateJavaScript(fallback)
     }
 
     private func setWebState(_ state: [String: Any]) {
