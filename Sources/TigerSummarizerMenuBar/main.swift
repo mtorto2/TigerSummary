@@ -63,7 +63,7 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
             backing: .buffered,
             defer: false
         )
-        window.title = "TigerSummarizer"
+        window.title = "TigerDroppings Summarizer"
         window.center()
         window.backgroundColor = NSColor(red: 0.035, green: 0.031, blue: 0.043, alpha: 1)
         window.contentView = webView
@@ -131,7 +131,7 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
         summaryText = ""
         setWebState([
             "mode": "ready",
-            "title": "TigerSummarizer",
+            "title": "TigerDroppings Summarizer",
             "subtitle": "Copy a TigerDroppings thread URL, click TDS, then summarize.",
             "status": "Ready",
             "summary": "Ready.\n\nCopy a TigerDroppings thread URL, click the TDS menu bar item, then choose Summarize Clipboard URL.",
@@ -143,7 +143,7 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
         summaryText = text
         setWebState([
             "mode": "notice",
-            "title": "TigerSummarizer",
+            "title": "TigerDroppings Summarizer",
             "subtitle": "",
             "status": "Notice",
             "summary": text,
@@ -220,7 +220,7 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
         } else {
             let fallback = """
             <html><body style="background:#09070d;color:#f0edf5;font-family:-apple-system;padding:24px">
-            <h1>TigerSummarizer</h1>
+            <h1>TigerDroppings Summarizer</h1>
             <p>React viewer is not built yet. Run <code>npm run build:web</code>.</p>
             </body></html>
             """
@@ -257,7 +257,7 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
             .replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;")
         let fallback = """
-        document.body.innerHTML = '<main style="min-height:100vh;margin:0;padding:24px;background:#09070d;color:#f0edf5;font-family:-apple-system"><h1 style="color:#fddb3a">TigerSummarizer</h1><p>\(escaped)</p><p>Try rebuilding with <code>./scripts/package_menubar_app.sh</code>.</p></main>';
+        document.body.innerHTML = '<main style="min-height:100vh;margin:0;padding:24px;background:#09070d;color:#f0edf5;font-family:-apple-system"><h1 style="color:#fddb3a">TigerDroppings Summarizer</h1><p>\(escaped)</p><p>Try rebuilding with <code>./scripts/package_menubar_app.sh</code>.</p></main>';
         """
         webView.evaluateJavaScript(fallback)
     }
@@ -443,7 +443,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             runningProcess = nil
             statusItem.button?.title = "TDS"
-            summaryWindow.showMessage("Could not start TigerSummarizer.\n\n\(error)")
+            summaryWindow.showMessage("Could not start TigerDroppings Summarizer.\n\n\(error)")
         }
     }
 }

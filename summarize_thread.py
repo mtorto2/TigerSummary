@@ -761,7 +761,7 @@ def main() -> int:
     try:
         thread_url = normalize_thread_url(args.url)
         if notify_projecthub:
-            send_projecthub_message(f"TigerSummarizer started.\n\n{thread_url}")
+            send_projecthub_message(f"TigerDroppings Summarizer started.\n\n{thread_url}")
 
         session = build_session()
         thread = crawl_thread(session, thread_url)
@@ -788,7 +788,7 @@ def main() -> int:
         print(summary)
         if notify_projecthub:
             message = (
-                "TigerSummarizer finished.\n\n"
+                "TigerDroppings Summarizer finished.\n\n"
                 f"Title: {thread.title}\n"
                 f"Posts: {len(thread.posts)}\n"
                 f"Pages: {thread.verified_last_page}"
@@ -800,15 +800,15 @@ def main() -> int:
     except requests.HTTPError as exc:
         print(f"HTTP error: {exc}", file=sys.stderr)
         if notify_projecthub:
-            send_projecthub_message(f"TigerSummarizer failed with an HTTP error.\n\n{exc}")
+            send_projecthub_message(f"TigerDroppings Summarizer failed with an HTTP error.\n\n{exc}")
     except requests.RequestException as exc:
         print(f"Request failed: {exc}", file=sys.stderr)
         if notify_projecthub:
-            send_projecthub_message(f"TigerSummarizer request failed.\n\n{exc}")
+            send_projecthub_message(f"TigerDroppings Summarizer request failed.\n\n{exc}")
     except Exception as exc:  # pylint: disable=broad-except
         print(f"Error: {exc}", file=sys.stderr)
         if notify_projecthub:
-            send_projecthub_message(f"TigerSummarizer failed.\n\n{exc}")
+            send_projecthub_message(f"TigerDroppings Summarizer failed.\n\n{exc}")
 
     return 1
 

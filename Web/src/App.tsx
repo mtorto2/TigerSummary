@@ -13,7 +13,7 @@ export type SummaryState = {
 
 const initialState: SummaryState = {
   mode: 'ready',
-  title: 'TigerSummarizer',
+  title: 'TigerDroppings Summarizer',
   subtitle: 'Copy a TigerDroppings thread URL, click TDS, then summarize.',
   status: 'Ready',
   summary:
@@ -37,17 +37,25 @@ function parseSentiment(text: string) {
   };
 }
 
+function normalizeMarkdownLine(line: string) {
+  return line
+    .trim()
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/\*\*/g, '')
+    .trim();
+}
+
 function parseTone(text: string) {
   const lines = text.split('\n');
-  const sentimentIndex = lines.findIndex((line) => /^B\.\s+Overall Sentiment/i.test(line.trim()));
+  const sentimentIndex = lines.findIndex((line) => /^B\.\s+Overall Sentiment/i.test(normalizeMarkdownLine(line)));
   if (sentimentIndex === -1) return '';
 
   for (const line of lines.slice(sentimentIndex + 1, sentimentIndex + 8)) {
-    const cleaned = line
+    const cleaned = normalizeMarkdownLine(line)
       .replace(/^[-*]\s*/, '')
       .replace(/^One-line description of tone:\s*/i, '')
       .trim();
-    if (cleaned && !/Positive[^0-9]+\d+%/i.test(cleaned)) {
+    if (cleaned && !/Positive[^0-9]+\d+%/i.test(cleaned) && !/^Overall Sentiment/i.test(cleaned)) {
       return cleaned;
     }
   }
@@ -60,7 +68,7 @@ function splitSections(text: string) {
   let current: { heading: string; body: string[] } | null = null;
 
   for (const line of lines) {
-    const trimmed = line.trim();
+    const trimmed = normalizeMarkdownLine(line);
     const isHeading = /^[A-J]\.\s/.test(trimmed) || (trimmed.endsWith(':') && trimmed.length < 80);
 
     if (isHeading) {
@@ -103,12 +111,12 @@ function SummaryBody({ text }: { text: string }) {
           <h2>{section.heading}</h2>
           <div className="sectionBody">
             {section.body.map((line, lineIndex) => {
-              const trimmed = line.trim();
+              const trimmed = normalizeMarkdownLine(line);
               if (!trimmed) return <div className="spacer" key={lineIndex} />;
               if (/^[-*]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed)) {
                 return <p className="bulletLine" key={lineIndex}>{trimmed}</p>;
               }
-              return <p key={lineIndex}>{line}</p>;
+              return <p key={lineIndex}>{trimmed}</p>;
             })}
           </div>
         </section>

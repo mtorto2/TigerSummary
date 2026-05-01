@@ -26,7 +26,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
   <key>CFBundleIdentifier</key>
   <string>com.savantsoftwaresystems.TigerSummarizerMenuBar</string>
   <key>CFBundleName</key>
-  <string>TigerSummarizer</string>
+  <string>TigerDroppings Summarizer</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>

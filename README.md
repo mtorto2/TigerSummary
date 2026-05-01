@@ -99,7 +99,7 @@ Run it:
 open -n build/TigerSummarizerMenuBar.app
 ```
 
-It adds a `TS` item to the macOS menu bar. Use `Summarize Clipboard URL` after copying a TigerDroppings thread link, or drag a URL onto the menu bar item. Results open in a local window and are also saved by the Python backend.
+It adds a `TDS` item to the macOS menu bar. Use `Summarize Clipboard URL` after copying a TigerDroppings thread link, or drag a URL onto the menu bar item. Results open in a local window and are also saved by the Python backend.
 
 You should see progress messages like:
 
