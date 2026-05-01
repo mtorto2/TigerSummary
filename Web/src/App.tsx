@@ -69,9 +69,22 @@ function normalizeSectionHeading(heading: string) {
   return heading;
 }
 
+function renumberVisibleSections(sections: Array<{ heading: string; body: string[] }>) {
+  return sections.map((section, index) => {
+    const match = section.heading.match(/^[A-J]\.\s+(.+)$/);
+    if (!match) return section;
+
+    const letter = String.fromCharCode('A'.charCodeAt(0) + index);
+    return {
+      ...section,
+      heading: `${letter}. ${match[1]}`,
+    };
+  });
+}
+
 function formatSectionLine(sectionHeading: string, line: string) {
   const trimmed = normalizeMarkdownLine(line);
-  if (!/^C\.\s+Users say\.\.\./i.test(sectionHeading)) {
+  if (!/^[A-J]\.\s+Users say\.\.\./i.test(sectionHeading)) {
     return trimmed;
   }
 
@@ -101,7 +114,9 @@ function splitSections(text: string) {
   }
 
   if (current) sections.push(current);
-  return sections.filter((section) => !/^B\.\s+Overall Sentiment/i.test(section.heading));
+  return renumberVisibleSections(
+    sections.filter((section) => !/^B\.\s+Overall Sentiment/i.test(section.heading))
+  );
 }
 
 function SentimentGauge({ label, value, tone }: { label: string; value: number; tone: string }) {
