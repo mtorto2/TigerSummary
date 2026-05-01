@@ -101,7 +101,7 @@ function parseHighlightedPost(line: string) {
   const cleaned = normalizeMarkdownLine(line).replace(/^[-*]\s*/, '');
   const match = cleaned.match(/^(.*?)\s+[—-]\s+(.*)$/);
   const meta = match?.[1] ?? cleaned;
-  const reason = match?.[2] ?? '';
+  const rawReason = match?.[2] ?? '';
   const parts = meta.split('|').map((part) => part.trim()).filter(Boolean);
   const postPart = parts.find((part) => /^Post\s*#?\s*\d+/i.test(part));
   const pagePart = parts.find((part) => /^page\s*=?\s*\d+/i.test(part));
@@ -115,32 +115,46 @@ function parseHighlightedPost(line: string) {
       && normalized
       && !/^unknown(?:\s+user)?$/i.test(normalized)
       && !/^post_?id\b/i.test(part)
-      && !/^(upvotes|downvotes|score|vote_score|replies)\b/i.test(part);
+      && !/^(upvotes|downvotes|score|vote_score|vote score|replies|reply_count|reply count)\b/i.test(part);
   });
-  const readStat = (label: string) => {
-    const stat = parts.find((part) => new RegExp(`^${label}\\b`, 'i').test(part));
-    return stat?.replace(new RegExp(`^${label}\\s*[:=]?\\s*`, 'i'), '') ?? '';
+  const readStat = (labels: string[]) => {
+    for (const label of labels) {
+      const pattern = label.replace(/\s+/g, '[ _-]?');
+      const stat = parts.find((part) => new RegExp(`^${pattern}\\b`, 'i').test(part));
+      const value = stat?.replace(new RegExp(`^${pattern}\\s*[:=]?\\s*`, 'i'), '').trim();
+      if (value) return value;
+    }
+    return '';
   };
+  const stripMetricText = (value: string) => value
+    .replace(/\bpost_?id\s*[:=]?\s*\d+\s*\|?/gi, '')
+    .replace(/\bupvotes?\s*[:=]?\s*-?\d+\s*\|?/gi, '')
+    .replace(/\bdownvotes?\s*[:=]?\s*-?\d+\s*\|?/gi, '')
+    .replace(/\b(?:vote\s*score|vote_score|score)\s*[:=]?\s*-?\d+\s*\|?/gi, '')
+    .replace(/\b(?:reply\s*count|reply_count|replies)\s*[:=]?\s*-?\d+\s*\|?/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^\s*[|,;-]+\s*/, '')
+    .trim();
 
   return {
     post: postPart || 'Post',
     user: userPart ? normalizeUser(userPart) : '',
     page: pagePart?.replace(/^page\s*=?\s*/i, 'page ') ?? '',
-    upvotes: readStat('upvotes'),
-    downvotes: readStat('downvotes'),
-    score: readStat('score') || readStat('vote_score'),
-    replies: readStat('replies'),
-    reason,
+    upvotes: readStat(['upvotes', 'upvote']),
+    downvotes: readStat(['downvotes', 'downvote']),
+    score: readStat(['score', 'vote_score', 'vote score']),
+    replies: readStat(['replies', 'reply_count', 'reply count']),
+    reason: stripMetricText(rawReason),
   };
 }
 
 function HighlightedPost({ line }: { line: string }) {
   const post = parseHighlightedPost(line);
   const stats = [
-    { label: 'Upvotes', icon: '↑', value: post.upvotes, className: 'up' },
-    { label: 'Downvotes', icon: '↓', value: post.downvotes, className: 'down' },
-    { label: 'Score', icon: '±', value: post.score, className: 'score' },
-    { label: 'Replies', icon: '↩', value: post.replies, className: 'reply' },
+    { label: 'Upvotes', icon: '👍', value: post.upvotes, className: 'up' },
+    { label: 'Downvotes', icon: '👎', value: post.downvotes, className: 'down' },
+    { label: 'Score', icon: '★', value: post.score, className: 'score' },
+    { label: 'Replies', icon: '💬', value: post.replies, className: 'reply' },
   ].filter((stat) => stat.value !== '');
 
   return (

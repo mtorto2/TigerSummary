@@ -320,19 +320,20 @@ button {
 .highlightStats {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .statPill {
-  gap: 5px;
-  padding: 0 8px;
+  gap: 4px;
+  min-width: 42px;
+  padding: 0 9px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
 }
 
 .statPill span {
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
 }
 
