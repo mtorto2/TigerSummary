@@ -62,6 +62,25 @@ function parseTone(text: string) {
   return '';
 }
 
+function normalizeSectionHeading(heading: string) {
+  if (/^C\.\s+Key Themes/i.test(heading)) {
+    return 'C. Users say...';
+  }
+  return heading;
+}
+
+function formatSectionLine(sectionHeading: string, line: string) {
+  const trimmed = normalizeMarkdownLine(line);
+  if (!/^C\.\s+Users say\.\.\./i.test(sectionHeading)) {
+    return trimmed;
+  }
+
+  return trimmed.replace(/^([-*]\s*)Users say\s+(.+)$/i, (_match, bullet: string, content: string) => {
+    const cleaned = content.trim();
+    return `${bullet}${cleaned.charAt(0).toUpperCase()}${cleaned.slice(1)}`;
+  });
+}
+
 function splitSections(text: string) {
   const lines = text.split('\n');
   const sections: Array<{ heading: string; body: string[] }> = [];
@@ -73,7 +92,7 @@ function splitSections(text: string) {
 
     if (isHeading) {
       if (current) sections.push(current);
-      current = { heading: trimmed, body: [] };
+      current = { heading: normalizeSectionHeading(trimmed), body: [] };
     } else if (current) {
       current.body.push(line);
     } else if (trimmed) {
@@ -195,7 +214,7 @@ function SummaryBody({ text }: { text: string }) {
           <h2>{section.heading}</h2>
           <div className="sectionBody">
             {section.body.map((line, lineIndex) => {
-              const trimmed = normalizeMarkdownLine(line);
+              const trimmed = formatSectionLine(section.heading, line);
               if (!trimmed) return <div className="spacer" key={lineIndex} />;
               if (/^G\.\s+Highlighted Posts/i.test(section.heading) && /^[-*]\s*Post\s+\d+/i.test(trimmed)) {
                 return <HighlightedPost line={trimmed} key={lineIndex} />;

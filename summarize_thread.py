@@ -703,7 +703,8 @@ def build_final_prompt(thread: ThreadData, chunk_summaries: List[str]) -> str:
         B. Overall Sentiment
            - Positive: X% | Negative: Y% | Neutral: Z%
            - One-line description of tone
-        C. Key Themes ("Users say...")
+        C. Users say...
+           - Do not begin bullets with "Users say"; start each bullet with the actual claim/content.
         D. Most Common Complaints
         E. Most Common Explanations / Theories
         F. Thread Vibe
