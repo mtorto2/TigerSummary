@@ -165,7 +165,7 @@ button {
 }
 
 .circleTrack.neutral {
-  --gauge-color: var(--td-purple-light);
+  --gauge-color: #efeaf7;
 }
 
 .progressFeature {
