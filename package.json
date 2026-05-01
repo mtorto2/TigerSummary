@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:web": "vite build --config Web/vite.config.ts"
+    "build:web": "vite build --config Web/vite.config.ts && node scripts/inline_web_assets.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.2",
