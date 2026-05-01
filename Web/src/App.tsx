@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 
 type Mode = 'ready' | 'running' | 'done' | 'error' | 'notice';
 
@@ -37,6 +37,23 @@ function parseSentiment(text: string) {
   };
 }
 
+function parseTone(text: string) {
+  const lines = text.split('\n');
+  const sentimentIndex = lines.findIndex((line) => /^B\.\s+Overall Sentiment/i.test(line.trim()));
+  if (sentimentIndex === -1) return '';
+
+  for (const line of lines.slice(sentimentIndex + 1, sentimentIndex + 8)) {
+    const cleaned = line
+      .replace(/^[-*]\s*/, '')
+      .replace(/^One-line description of tone:\s*/i, '')
+      .trim();
+    if (cleaned && !/Positive[^0-9]+\d+%/i.test(cleaned)) {
+      return cleaned;
+    }
+  }
+  return '';
+}
+
 function splitSections(text: string) {
   const lines = text.split('\n');
   const sections: Array<{ heading: string; body: string[] }> = [];
@@ -57,19 +74,17 @@ function splitSections(text: string) {
   }
 
   if (current) sections.push(current);
-  return sections;
+  return sections.filter((section) => !/^B\.\s+Overall Sentiment/i.test(section.heading));
 }
 
 function SentimentGauge({ label, value, tone }: { label: string; value: number; tone: string }) {
+  const style = { '--value': value } as CSSProperties;
   return (
-    <div className="gauge">
-      <div className="gaugeMeta">
-        <span>{label}</span>
+    <div className="circleGauge">
+      <div className={`circleTrack ${tone}`} style={style}>
         <strong>{value}%</strong>
       </div>
-      <div className="gaugeTrack">
-        <div className={`gaugeFill ${tone}`} style={{ width: `${value}%` }} />
-      </div>
+      <span>{label}</span>
     </div>
   );
 }
@@ -105,6 +120,7 @@ function SummaryBody({ text }: { text: string }) {
 export function App() {
   const [state, setState] = useState<SummaryState>(initialState);
   const sentiment = useMemo(() => parseSentiment(state.summary), [state.summary]);
+  const tone = useMemo(() => parseTone(state.summary), [state.summary]);
   const isRunning = state.mode === 'running';
 
   useEffect(() => {
@@ -126,10 +142,14 @@ export function App() {
           </div>
         </div>
 
-        <aside className="sentimentPanel" aria-label="Sentiment gauges">
-          <SentimentGauge label="Positive" value={sentiment.positive} tone="positive" />
-          <SentimentGauge label="Negative" value={sentiment.negative} tone="negative" />
-          <SentimentGauge label="Neutral" value={sentiment.neutral} tone="neutral" />
+        <aside className="sentimentCard" aria-label="Overall sentiment">
+          <h2>Overall Sentiment</h2>
+          <div className="sentimentPanel">
+            <SentimentGauge label="Positive" value={sentiment.positive} tone="positive" />
+            <SentimentGauge label="Negative" value={sentiment.negative} tone="negative" />
+            <SentimentGauge label="Neutral" value={sentiment.neutral} tone="neutral" />
+          </div>
+          <p>{tone || 'Tone will appear here when the summary is ready.'}</p>
         </aside>
       </header>
 

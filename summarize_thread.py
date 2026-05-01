@@ -15,6 +15,7 @@ Workflow:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -533,6 +534,10 @@ def send_projecthub_message(text: str) -> None:
         print(f"ProjectHub notification failed: {exc}", file=sys.stderr)
 
 
+def print_app_event(event: str, **payload: object) -> None:
+    print(f"APP_EVENT {json.dumps({'event': event, **payload})}", file=sys.stderr)
+
+
 def chunk_posts(posts: Iterable[Post], max_chars: int = CHUNK_CHAR_LIMIT) -> List[str]:
     chunks: List[str] = []
     current_parts: List[str] = []
@@ -760,6 +765,13 @@ def main() -> int:
 
         session = build_session()
         thread = crawl_thread(session, thread_url)
+        print_app_event(
+            "thread",
+            title=thread.title,
+            url=thread.first_page_url,
+            pages=thread.verified_last_page,
+            posts=len(thread.posts),
+        )
 
         if not thread.posts:
             raise RuntimeError(

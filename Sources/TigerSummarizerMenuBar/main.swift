@@ -170,15 +170,20 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
+        let lines = trimmed.split(separator: "\n").map(String.init)
+        for line in lines where line.hasPrefix("APP_EVENT ") {
+            handleAppEvent(String(line.dropFirst("APP_EVENT ".count)))
+        }
+
         if let range = trimmed.range(of: "Saved summary: ") {
             savedPath = String(trimmed[range.upperBound...])
         }
 
-        let latestLine = trimmed.split(separator: "\n").last.map(String.init) ?? trimmed
-        setWebState([
-            "status": latestLine,
-            "savedPath": savedPath ?? "",
-        ])
+        var state: [String: Any] = ["savedPath": savedPath ?? ""]
+        if let latestLine = lines.last(where: { !$0.hasPrefix("APP_EVENT ") }) {
+            state["status"] = latestLine
+        }
+        setWebState(state)
     }
 
     func appendSummary(_ text: String) {
@@ -220,6 +225,29 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
             </body></html>
             """
             webView.loadHTMLString(fallback, baseURL: nil)
+        }
+    }
+
+    private func handleAppEvent(_ json: String) {
+        guard
+            let data = json.data(using: .utf8),
+            let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            event["event"] as? String == "thread"
+        else {
+            return
+        }
+
+        var state: [String: Any] = [:]
+        if let title = event["title"] as? String, !title.isEmpty {
+            state["title"] = title
+        }
+        if let posts = event["posts"] as? Int, let pages = event["pages"] as? Int {
+            state["subtitle"] = "\(posts) posts across \(pages) pages"
+        } else if let url = event["url"] as? String {
+            state["subtitle"] = url
+        }
+        if !state.isEmpty {
+            setWebState(state)
         }
     }
 
