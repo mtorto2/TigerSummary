@@ -103,18 +103,29 @@ function parseHighlightedPost(line: string) {
   const meta = match?.[1] ?? cleaned;
   const reason = match?.[2] ?? '';
   const parts = meta.split('|').map((part) => part.trim()).filter(Boolean);
-  const post = parts.find((part) => /^Post\s+\d+/i.test(part));
-  const page = parts.find((part) => /^page\s+\d+/i.test(part));
-  const user = parts.find((part) => part !== post && part !== page && !/^post_?id\b/i.test(part) && !/^(upvotes|downvotes|score|vote_score|replies)\b/i.test(part));
+  const postPart = parts.find((part) => /^Post\s*#?\s*\d+/i.test(part));
+  const pagePart = parts.find((part) => /^page\s*=?\s*\d+/i.test(part));
+  const normalizeUser = (value: string) => value
+    .replace(/^(user|username)\s*[:=]\s*/i, '')
+    .trim();
+  const userPart = parts.find((part) => {
+    const normalized = normalizeUser(part);
+    return part !== postPart
+      && part !== pagePart
+      && normalized
+      && !/^unknown(?:\s+user)?$/i.test(normalized)
+      && !/^post_?id\b/i.test(part)
+      && !/^(upvotes|downvotes|score|vote_score|replies)\b/i.test(part);
+  });
   const readStat = (label: string) => {
     const stat = parts.find((part) => new RegExp(`^${label}\\b`, 'i').test(part));
-    return stat?.replace(new RegExp(`^${label}\\s*=?\\s*`, 'i'), '') ?? '';
+    return stat?.replace(new RegExp(`^${label}\\s*[:=]?\\s*`, 'i'), '') ?? '';
   };
 
   return {
-    post: post || 'Post',
-    user: user || 'Unknown user',
-    page: page || '',
+    post: postPart || 'Post',
+    user: userPart ? normalizeUser(userPart) : '',
+    page: pagePart?.replace(/^page\s*=?\s*/i, 'page ') ?? '',
     upvotes: readStat('upvotes'),
     downvotes: readStat('downvotes'),
     score: readStat('score') || readStat('vote_score'),
@@ -137,7 +148,7 @@ function HighlightedPost({ line }: { line: string }) {
       <div className="highlightPostHeader">
         <div>
           <strong>{post.post}</strong>
-          <span>{post.user}</span>
+          {post.user && <span>{post.user}</span>}
         </div>
         {post.page && <span className="pagePill">{post.page}</span>}
       </div>
