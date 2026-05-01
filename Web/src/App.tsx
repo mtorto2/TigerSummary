@@ -180,7 +180,6 @@ export function App() {
       <footer className="actionBar">
         <button type="button" onClick={() => postAction('copy')}>Copy</button>
         <button type="button" onClick={() => postAction('export')}>Export</button>
-        <button type="button" onClick={() => postAction('openSaved')}>Open Saved</button>
       </footer>
     </main>
   );
