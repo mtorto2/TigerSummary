@@ -342,9 +342,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: 36)
         if let button = statusItem.button {
             button.title = "TDS"
+            button.font = NSFont.systemFont(ofSize: 11, weight: .bold)
             button.toolTip = "Drop a TigerDroppings thread URL here, or use the menu."
 
             let overlay = DropOverlayView(frame: button.bounds)
