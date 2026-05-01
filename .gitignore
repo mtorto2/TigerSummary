@@ -5,4 +5,5 @@ __pycache__/
 .venv/
 .build/
 build/
+node_modules/
 Summaries/*.md

@@ -35,6 +35,7 @@ Install dependencies:
 
 ```bash
 python3 -m pip install -r requirements.txt
+npm install
 ```
 
 Set your OpenAI API key in `.env`:
@@ -84,6 +85,7 @@ ProjectHub notifications use the Telegram bot credentials from `/Users/matt/Dev/
 ## Menu Bar App
 
 The repo includes an early native macOS wrapper that runs the Python summarizer in the background.
+The result window is rendered by a local React/TSX app inside a native `WKWebView`, while the menu bar shell stays native Swift/AppKit.
 
 Build it:
 

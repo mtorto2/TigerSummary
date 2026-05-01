@@ -1,0 +1,159 @@
+import { useEffect, useMemo, useState } from 'react';
+
+type Mode = 'ready' | 'running' | 'done' | 'error' | 'notice';
+
+export type SummaryState = {
+  mode: Mode;
+  title: string;
+  subtitle: string;
+  status: string;
+  summary: string;
+  savedPath?: string;
+};
+
+const initialState: SummaryState = {
+  mode: 'ready',
+  title: 'TigerSummarizer',
+  subtitle: 'Copy a TigerDroppings thread URL, click TS, then summarize.',
+  status: 'Ready',
+  summary:
+    'Ready.\n\nCopy a TigerDroppings thread URL, click the TS menu bar item, then choose Summarize Clipboard URL.',
+};
+
+function postAction(action: string) {
+  window.webkit?.messageHandlers?.tigerAction?.postMessage({ action });
+}
+
+function parseSentiment(text: string) {
+  const read = (label: string) => {
+    const match = text.match(new RegExp(`${label}[^0-9]{0,20}(\\d{1,3})%`, 'i'));
+    return match ? Math.max(0, Math.min(100, Number(match[1]))) : 0;
+  };
+
+  return {
+    positive: read('Positive'),
+    negative: read('Negative'),
+    neutral: read('Neutral'),
+  };
+}
+
+function splitSections(text: string) {
+  const lines = text.split('\n');
+  const sections: Array<{ heading: string; body: string[] }> = [];
+  let current: { heading: string; body: string[] } | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const isHeading = /^[A-J]\.\s/.test(trimmed) || (trimmed.endsWith(':') && trimmed.length < 80);
+
+    if (isHeading) {
+      if (current) sections.push(current);
+      current = { heading: trimmed, body: [] };
+    } else if (current) {
+      current.body.push(line);
+    } else if (trimmed) {
+      current = { heading: 'Summary', body: [line] };
+    }
+  }
+
+  if (current) sections.push(current);
+  return sections;
+}
+
+function SentimentGauge({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div className="gauge">
+      <div className="gaugeMeta">
+        <span>{label}</span>
+        <strong>{value}%</strong>
+      </div>
+      <div className="gaugeTrack">
+        <div className={`gaugeFill ${tone}`} style={{ width: `${value}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function SummaryBody({ text }: { text: string }) {
+  const sections = useMemo(() => splitSections(text), [text]);
+
+  if (!text.trim()) {
+    return <p className="emptyText">Waiting for summary output...</p>;
+  }
+
+  return (
+    <div className="summarySections">
+      {sections.map((section, index) => (
+        <section className="summarySection" key={`${section.heading}-${index}`}>
+          <h2>{section.heading}</h2>
+          <div className="sectionBody">
+            {section.body.map((line, lineIndex) => {
+              const trimmed = line.trim();
+              if (!trimmed) return <div className="spacer" key={lineIndex} />;
+              if (/^[-*]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed)) {
+                return <p className="bulletLine" key={lineIndex}>{trimmed}</p>;
+              }
+              return <p key={lineIndex}>{line}</p>;
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export function App() {
+  const [state, setState] = useState<SummaryState>(initialState);
+  const sentiment = useMemo(() => parseSentiment(state.summary), [state.summary]);
+  const isRunning = state.mode === 'running';
+
+  useEffect(() => {
+    window.TigerSummary = {
+      setState: (nextState) => setState((current) => ({ ...current, ...nextState })),
+      appendSummary: (text) => setState((current) => ({ ...current, summary: current.summary + text })),
+      updateStatus: (status) => setState((current) => ({ ...current, status })),
+    };
+  }, []);
+
+  return (
+    <main className="shell">
+      <header className="topBar">
+        <div className="brand">
+          <div className="badge">TS</div>
+          <div>
+            <h1>{state.title}</h1>
+            <p>{state.subtitle}</p>
+          </div>
+        </div>
+
+        <aside className="sentimentPanel" aria-label="Sentiment gauges">
+          <SentimentGauge label="Positive" value={sentiment.positive} tone="positive" />
+          <SentimentGauge label="Negative" value={sentiment.negative} tone="negative" />
+          <SentimentGauge label="Neutral" value={sentiment.neutral} tone="neutral" />
+        </aside>
+      </header>
+
+      {isRunning && (
+        <section className="progressFeature">
+          <div>
+            <div className="eyebrow">Processing Thread</div>
+            <h2>{state.status || 'Summarizing...'}</h2>
+          </div>
+          <div className="animatedBar">
+            <span />
+          </div>
+        </section>
+      )}
+
+      <section className={`reader ${state.mode}`}>
+        <SummaryBody text={state.summary} />
+      </section>
+
+      <footer className="actionBar">
+        <button type="button" onClick={() => postAction('copy')}>Copy</button>
+        <button type="button" onClick={() => postAction('export')}>Export</button>
+        <button type="button" onClick={() => postAction('openSaved')}>Open Saved</button>
+      </footer>
+    </main>
+  );
+}
