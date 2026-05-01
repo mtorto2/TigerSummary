@@ -1,6 +1,20 @@
 import AppKit
 import UniformTypeIdentifiers
 
+enum TigerTheme {
+    static let pageBackground = NSColor(red: 0.035, green: 0.031, blue: 0.043, alpha: 1)
+    static let panelBackground = NSColor(red: 0.055, green: 0.043, blue: 0.068, alpha: 1)
+    static let readerBackground = NSColor(red: 0.024, green: 0.022, blue: 0.03, alpha: 1)
+    static let tigerDroppingsPurple = NSColor(red: 0.314, green: 0.035, blue: 0.455, alpha: 1)
+    static let tigerDroppingsDarkPurple = NSColor(red: 0.239, green: 0.031, blue: 0.345, alpha: 1)
+    static let tigerDroppingsLightPurple = NSColor(red: 0.384, green: 0.133, blue: 0.51, alpha: 1)
+    static let lsuGold = NSColor(red: 0.992, green: 0.815, blue: 0.14, alpha: 1)
+    static let goldMuted = NSColor(red: 0.78, green: 0.61, blue: 0.16, alpha: 1)
+    static let textPrimary = NSColor(white: 0.92, alpha: 1)
+    static let textSecondary = NSColor(white: 0.68, alpha: 1)
+    static let border = NSColor(red: 0.29, green: 0.21, blue: 0.37, alpha: 1)
+}
+
 final class DropOverlayView: NSView {
     var onURL: ((String) -> Void)?
 
@@ -51,7 +65,7 @@ final class SentimentGaugeView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.cornerRadius = 10
-        layer?.backgroundColor = NSColor(red: 0.05, green: 0.05, blue: 0.058, alpha: 1).cgColor
+        layer?.backgroundColor = TigerTheme.panelBackground.cgColor
     }
 
     required init?(coder: NSCoder) {
@@ -69,18 +83,18 @@ final class SentimentGaugeView: NSView {
         super.draw(dirtyRect)
 
         let rows = [
-            ("Positive", positive, NSColor(red: 0.18, green: 0.75, blue: 0.38, alpha: 1)),
-            ("Negative", negative, NSColor(red: 0.9, green: 0.18, blue: 0.16, alpha: 1)),
-            ("Neutral", neutral, NSColor(red: 0.35, green: 0.58, blue: 0.95, alpha: 1))
+            ("Positive", positive, TigerTheme.lsuGold),
+            ("Negative", negative, NSColor(red: 0.86, green: 0.23, blue: 0.25, alpha: 1)),
+            ("Neutral", neutral, TigerTheme.tigerDroppingsLightPurple)
         ]
 
         let labelAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 10, weight: .semibold),
-            .foregroundColor: NSColor(white: 0.72, alpha: 1)
+            .foregroundColor: TigerTheme.textSecondary
         ]
         let valueAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .bold),
-            .foregroundColor: NSColor.white
+            .foregroundColor: TigerTheme.textPrimary
         ]
 
         let left: CGFloat = 10
@@ -98,7 +112,7 @@ final class SentimentGaugeView: NSView {
             "\(row.1)%".draw(in: NSRect(x: bounds.width - right - valueWidth, y: y - 1, width: valueWidth, height: 14), withAttributes: valueAttrs)
 
             let trackRect = NSRect(x: left + labelWidth + 4, y: y + 3, width: barWidth, height: barHeight)
-            NSColor(white: 0.18, alpha: 1).setFill()
+            TigerTheme.border.withAlphaComponent(0.55).setFill()
             NSBezierPath(roundedRect: trackRect, xRadius: 3, yRadius: 3).fill()
 
             let fillRect = NSRect(x: trackRect.minX, y: trackRect.minY, width: trackRect.width * CGFloat(row.1) / 100.0, height: trackRect.height)
@@ -136,40 +150,42 @@ final class SummaryWindowController: NSWindowController {
         )
         window.title = "TigerSummarizer"
         window.center()
-        window.backgroundColor = NSColor(red: 0.045, green: 0.045, blue: 0.05, alpha: 1)
+        window.backgroundColor = TigerTheme.pageBackground
 
         let rootView = NSView()
         rootView.wantsLayer = true
-        rootView.layer?.backgroundColor = NSColor(red: 0.045, green: 0.045, blue: 0.05, alpha: 1).cgColor
+        rootView.layer?.backgroundColor = TigerTheme.pageBackground.cgColor
         rootView.translatesAutoresizingMaskIntoConstraints = false
 
         let headerView = NSView()
         headerView.wantsLayer = true
-        headerView.layer?.backgroundColor = NSColor(red: 0.07, green: 0.07, blue: 0.078, alpha: 1).cgColor
+        headerView.layer?.backgroundColor = TigerTheme.tigerDroppingsDarkPurple.cgColor
         headerView.layer?.cornerRadius = 10
+        headerView.layer?.borderWidth = 1
+        headerView.layer?.borderColor = TigerTheme.lsuGold.withAlphaComponent(0.32).cgColor
         headerView.translatesAutoresizingMaskIntoConstraints = false
 
         let iconView = NSTextField(labelWithString: "TS")
         iconView.alignment = .center
         iconView.font = NSFont.systemFont(ofSize: 18, weight: .heavy)
-        iconView.textColor = .white
+        iconView.textColor = TigerTheme.tigerDroppingsDarkPurple
         iconView.wantsLayer = true
-        iconView.layer?.backgroundColor = NSColor(red: 0.82, green: 0.08, blue: 0.06, alpha: 1).cgColor
+        iconView.layer?.backgroundColor = TigerTheme.lsuGold.cgColor
         iconView.layer?.cornerRadius = 8
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
         titleLabel.font = NSFont.systemFont(ofSize: 20, weight: .bold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = TigerTheme.textPrimary
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         subtitleLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
-        subtitleLabel.textColor = NSColor(white: 0.66, alpha: 1)
+        subtitleLabel.textColor = TigerTheme.textSecondary
         subtitleLabel.lineBreakMode = .byTruncatingTail
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         statusLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
-        statusLabel.textColor = NSColor(white: 0.82, alpha: 1)
+        statusLabel.textColor = TigerTheme.lsuGold
         statusLabel.alignment = .right
         statusLabel.lineBreakMode = .byTruncatingTail
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -182,18 +198,18 @@ final class SummaryWindowController: NSWindowController {
         gaugeView.translatesAutoresizingMaskIntoConstraints = false
 
         progressPanel.wantsLayer = true
-        progressPanel.layer?.backgroundColor = NSColor(red: 0.11, green: 0.025, blue: 0.025, alpha: 1).cgColor
+        progressPanel.layer?.backgroundColor = TigerTheme.tigerDroppingsPurple.cgColor
         progressPanel.layer?.cornerRadius = 12
         progressPanel.layer?.borderWidth = 1
-        progressPanel.layer?.borderColor = NSColor(red: 0.7, green: 0.08, blue: 0.06, alpha: 0.5).cgColor
+        progressPanel.layer?.borderColor = TigerTheme.lsuGold.withAlphaComponent(0.65).cgColor
         progressPanel.translatesAutoresizingMaskIntoConstraints = false
 
         progressTitleLabel.font = NSFont.systemFont(ofSize: 15, weight: .bold)
-        progressTitleLabel.textColor = .white
+        progressTitleLabel.textColor = TigerTheme.textPrimary
         progressTitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         progressDetailLabel.font = NSFont.systemFont(ofSize: 12, weight: .medium)
-        progressDetailLabel.textColor = NSColor(white: 0.72, alpha: 1)
+        progressDetailLabel.textColor = TigerTheme.lsuGold.withAlphaComponent(0.82)
         progressDetailLabel.lineBreakMode = .byTruncatingTail
         progressDetailLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -204,10 +220,10 @@ final class SummaryWindowController: NSWindowController {
 
         let contentCard = NSView()
         contentCard.wantsLayer = true
-        contentCard.layer?.backgroundColor = NSColor(red: 0.027, green: 0.027, blue: 0.031, alpha: 1).cgColor
+        contentCard.layer?.backgroundColor = TigerTheme.readerBackground.cgColor
         contentCard.layer?.cornerRadius = 12
         contentCard.layer?.borderWidth = 1
-        contentCard.layer?.borderColor = NSColor(white: 0.16, alpha: 1).cgColor
+        contentCard.layer?.borderColor = TigerTheme.border.cgColor
         contentCard.translatesAutoresizingMaskIntoConstraints = false
 
         scrollView.hasVerticalScroller = true
@@ -218,9 +234,9 @@ final class SummaryWindowController: NSWindowController {
         textView.isEditable = false
         textView.isRichText = true
         textView.drawsBackground = true
-        textView.backgroundColor = NSColor(red: 0.027, green: 0.027, blue: 0.031, alpha: 1)
-        textView.textColor = NSColor(white: 0.88, alpha: 1)
-        textView.insertionPointColor = .white
+        textView.backgroundColor = TigerTheme.readerBackground
+        textView.textColor = TigerTheme.textPrimary
+        textView.insertionPointColor = TigerTheme.lsuGold
         textView.font = NSFont.systemFont(ofSize: 16, weight: .regular)
         textView.textContainerInset = NSSize(width: 22, height: 22)
         textView.textContainer?.lineFragmentPadding = 0
@@ -339,7 +355,7 @@ final class SummaryWindowController: NSWindowController {
         button.bezelStyle = .rounded
         button.controlSize = .large
         button.font = NSFont.systemFont(ofSize: 14, weight: .semibold)
-        button.contentTintColor = .white
+        button.contentTintColor = TigerTheme.tigerDroppingsPurple
     }
 
     func showReady() {
@@ -425,7 +441,7 @@ final class SummaryWindowController: NSWindowController {
         paragraph.lineSpacing = 4
         paragraph.paragraphSpacing = 8
         let bodyFont = NSFont.systemFont(ofSize: 16, weight: .regular)
-        let bodyColor = NSColor(white: 0.86, alpha: 1)
+        let bodyColor = TigerTheme.textPrimary
 
         for rawLine in text.split(separator: "\n", omittingEmptySubsequences: false) {
             let line = String(rawLine)
@@ -433,7 +449,7 @@ final class SummaryWindowController: NSWindowController {
             let isHeading = isSectionHeading(trimmed)
             let isBullet = trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || trimmed.range(of: #"^\d+\."#, options: .regularExpression) != nil
             let font = isHeading ? NSFont.systemFont(ofSize: 21, weight: .bold) : (isBullet ? NSFont.systemFont(ofSize: 16, weight: .medium) : bodyFont)
-            let color = isHeading ? NSColor.white : bodyColor
+            let color = isHeading ? TigerTheme.lsuGold : bodyColor
 
             attributed.append(NSAttributedString(
                 string: line + "\n",
