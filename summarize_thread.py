@@ -487,6 +487,7 @@ def build_chunk_prompt(thread: ThreadData, chunk_text: str, chunk_number: int, c
         - Treat jokes, trolling, sarcasm, memes, and repeated running bits as meaningful signal.
         - Do not sanitize the tone into corporate blandness.
         - Do not summarize page by page.
+        - Preserve post numbers, users, and pages for posts that seem especially replied-to, quoted, funny, or high-signal.
         - Note uncertainty if the chunk is noisy or context-dependent.
         - Keep it concise because this is an intermediate chunk summary.
 
@@ -496,7 +497,7 @@ def build_chunk_prompt(thread: ThreadData, chunk_text: str, chunk_number: int, c
         3. Repeated jokes / memes / trolling
         4. Complaints
         5. Explanations / theories
-        6. High-signal moments
+        6. High-signal moments, with post numbers when available
         7. Chunk limitations
 
         Thread chunk:
@@ -524,25 +525,25 @@ def build_final_prompt(thread: ThreadData, chunk_summaries: List[str]) -> str:
         - Preserve the cultural tone: humor, trolling, sarcasm, repeated jokes, and dunking matter.
         - Be honest about uncertainty or parsing gaps.
         - Do not produce a page-by-page recap.
-        - Keep the output readable and structured for terminal display.
+        - Keep the output succinct: prioritize signal, avoid repeating the same point across sections.
+        - Highlight posts by post number/user/page when they appear especially replied-to, quoted, referenced, funny, or high-signal. If true upvote counts are unavailable, say "inferred highlight" rather than implying real vote data.
+        - Keep most bullets to one sentence.
 
         Output exactly these sections:
         A. High-Level Summary
         B. Overall Sentiment
-           - Estimated % Positive / Negative / Neutral
+           - Positive: X% | Negative: Y% | Neutral: Z%
            - One-line description of tone
         C. Key Themes ("Users say...")
         D. Most Common Complaints
         E. Most Common Explanations / Theories
         F. Thread Vibe
-        G. Notable / High-Signal Moments
-           - standout jokes
-           - repeated jokes
-           - memes
-           - trolling that resonated
-           - sharp or insightful posts
-        H. Signal vs Noise
-        I. Key Takeaways
+        G. Highlighted Posts
+           - 3 to 5 inferred highlights using post number, user, page, and why it stood out
+        H. Notable / High-Signal Moments
+           - standout jokes, repeated bits, memes, trolling, or sharp observations
+        I. Signal vs Noise
+        J. Key Takeaways
 
         Intermediate chunk summaries:
         {joined_chunks}

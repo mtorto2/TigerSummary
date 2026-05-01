@@ -42,11 +42,83 @@ final class DropOverlayView: NSView {
     }
 }
 
+final class SentimentGaugeView: NSView {
+    private var positive = 0
+    private var negative = 0
+    private var neutral = 0
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.cornerRadius = 10
+        layer?.backgroundColor = NSColor(red: 0.05, green: 0.05, blue: 0.058, alpha: 1).cgColor
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+
+    func update(positive: Int, negative: Int, neutral: Int) {
+        self.positive = max(0, min(100, positive))
+        self.negative = max(0, min(100, negative))
+        self.neutral = max(0, min(100, neutral))
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        let rows = [
+            ("Positive", positive, NSColor(red: 0.18, green: 0.75, blue: 0.38, alpha: 1)),
+            ("Negative", negative, NSColor(red: 0.9, green: 0.18, blue: 0.16, alpha: 1)),
+            ("Neutral", neutral, NSColor(red: 0.35, green: 0.58, blue: 0.95, alpha: 1))
+        ]
+
+        let labelAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 10, weight: .semibold),
+            .foregroundColor: NSColor(white: 0.72, alpha: 1)
+        ]
+        let valueAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .bold),
+            .foregroundColor: NSColor.white
+        ]
+
+        let left: CGFloat = 10
+        let right: CGFloat = 10
+        let top: CGFloat = 8
+        let rowHeight: CGFloat = 17
+        let labelWidth: CGFloat = 52
+        let valueWidth: CGFloat = 34
+        let barHeight: CGFloat = 6
+        let barWidth = max(20, bounds.width - left - right - labelWidth - valueWidth - 12)
+
+        for (index, row) in rows.enumerated() {
+            let y = bounds.height - top - CGFloat(index + 1) * rowHeight
+            row.0.draw(in: NSRect(x: left, y: y - 1, width: labelWidth, height: 14), withAttributes: labelAttrs)
+            "\(row.1)%".draw(in: NSRect(x: bounds.width - right - valueWidth, y: y - 1, width: valueWidth, height: 14), withAttributes: valueAttrs)
+
+            let trackRect = NSRect(x: left + labelWidth + 4, y: y + 3, width: barWidth, height: barHeight)
+            NSColor(white: 0.18, alpha: 1).setFill()
+            NSBezierPath(roundedRect: trackRect, xRadius: 3, yRadius: 3).fill()
+
+            let fillRect = NSRect(x: trackRect.minX, y: trackRect.minY, width: trackRect.width * CGFloat(row.1) / 100.0, height: trackRect.height)
+            row.2.setFill()
+            NSBezierPath(roundedRect: fillRect, xRadius: 3, yRadius: 3).fill()
+        }
+    }
+}
+
 final class SummaryWindowController: NSWindowController {
     private let titleLabel = NSTextField(labelWithString: "TigerSummarizer")
     private let subtitleLabel = NSTextField(labelWithString: "Drop or copy a TigerDroppings thread URL to begin.")
     private let statusLabel = NSTextField(labelWithString: "Ready")
     private let progressIndicator = NSProgressIndicator()
+    private let gaugeView = SentimentGaugeView()
+    private let progressPanel = NSView()
+    private let progressTitleLabel = NSTextField(labelWithString: "Summarizing")
+    private let progressDetailLabel = NSTextField(labelWithString: "Preparing thread...")
+    private let progressBar = NSProgressIndicator()
+    private var progressPanelHeightConstraint: NSLayoutConstraint?
     private let scrollView = NSScrollView()
     private let textView = NSTextView()
     private let copyButton = NSButton(title: "Copy", target: nil, action: nil)
@@ -107,6 +179,29 @@ final class SummaryWindowController: NSWindowController {
         progressIndicator.isDisplayedWhenStopped = false
         progressIndicator.translatesAutoresizingMaskIntoConstraints = false
 
+        gaugeView.translatesAutoresizingMaskIntoConstraints = false
+
+        progressPanel.wantsLayer = true
+        progressPanel.layer?.backgroundColor = NSColor(red: 0.11, green: 0.025, blue: 0.025, alpha: 1).cgColor
+        progressPanel.layer?.cornerRadius = 12
+        progressPanel.layer?.borderWidth = 1
+        progressPanel.layer?.borderColor = NSColor(red: 0.7, green: 0.08, blue: 0.06, alpha: 0.5).cgColor
+        progressPanel.translatesAutoresizingMaskIntoConstraints = false
+
+        progressTitleLabel.font = NSFont.systemFont(ofSize: 15, weight: .bold)
+        progressTitleLabel.textColor = .white
+        progressTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        progressDetailLabel.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        progressDetailLabel.textColor = NSColor(white: 0.72, alpha: 1)
+        progressDetailLabel.lineBreakMode = .byTruncatingTail
+        progressDetailLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        progressBar.style = .bar
+        progressBar.isIndeterminate = true
+        progressBar.controlSize = .regular
+        progressBar.translatesAutoresizingMaskIntoConstraints = false
+
         let contentCard = NSView()
         contentCard.wantsLayer = true
         contentCard.layer?.backgroundColor = NSColor(red: 0.027, green: 0.027, blue: 0.031, alpha: 1).cgColor
@@ -142,6 +237,7 @@ final class SummaryWindowController: NSWindowController {
         actionBar.addArrangedSubview(openSavedButton)
 
         rootView.addSubview(headerView)
+        rootView.addSubview(progressPanel)
         rootView.addSubview(contentCard)
         rootView.addSubview(actionBar)
         headerView.addSubview(iconView)
@@ -149,6 +245,10 @@ final class SummaryWindowController: NSWindowController {
         headerView.addSubview(subtitleLabel)
         headerView.addSubview(statusLabel)
         headerView.addSubview(progressIndicator)
+        headerView.addSubview(gaugeView)
+        progressPanel.addSubview(progressTitleLabel)
+        progressPanel.addSubview(progressDetailLabel)
+        progressPanel.addSubview(progressBar)
         contentCard.addSubview(scrollView)
 
         window.contentView = rootView
@@ -157,6 +257,9 @@ final class SummaryWindowController: NSWindowController {
         configureActionButton(copyButton, action: #selector(copySummary))
         configureActionButton(exportButton, action: #selector(exportSummary))
         configureActionButton(openSavedButton, action: #selector(openSavedSummary))
+
+        progressPanelHeightConstraint = progressPanel.heightAnchor.constraint(equalToConstant: 0)
+        progressPanelHeightConstraint?.isActive = true
 
         NSLayoutConstraint.activate([
             headerView.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 18),
@@ -174,19 +277,40 @@ final class SummaryWindowController: NSWindowController {
             titleLabel.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 18),
 
             subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: statusLabel.leadingAnchor, constant: -16),
+            subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: gaugeView.leadingAnchor, constant: -16),
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
 
             progressIndicator.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -18),
-            progressIndicator.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            progressIndicator.centerYAnchor.constraint(equalTo: headerView.topAnchor, constant: 24),
             progressIndicator.widthAnchor.constraint(equalToConstant: 18),
             progressIndicator.heightAnchor.constraint(equalToConstant: 18),
 
             statusLabel.trailingAnchor.constraint(equalTo: progressIndicator.leadingAnchor, constant: -10),
-            statusLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            statusLabel.widthAnchor.constraint(equalToConstant: 220),
+            statusLabel.centerYAnchor.constraint(equalTo: progressIndicator.centerYAnchor),
+            statusLabel.widthAnchor.constraint(equalToConstant: 190),
 
-            contentCard.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 14),
+            gaugeView.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -18),
+            gaugeView.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 32),
+            gaugeView.widthAnchor.constraint(equalToConstant: 260),
+            gaugeView.heightAnchor.constraint(equalToConstant: 58),
+
+            progressPanel.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 14),
+            progressPanel.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 18),
+            progressPanel.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -18),
+
+            progressTitleLabel.leadingAnchor.constraint(equalTo: progressPanel.leadingAnchor, constant: 18),
+            progressTitleLabel.topAnchor.constraint(equalTo: progressPanel.topAnchor, constant: 14),
+            progressTitleLabel.widthAnchor.constraint(equalToConstant: 160),
+
+            progressDetailLabel.leadingAnchor.constraint(equalTo: progressTitleLabel.trailingAnchor, constant: 12),
+            progressDetailLabel.trailingAnchor.constraint(equalTo: progressPanel.trailingAnchor, constant: -18),
+            progressDetailLabel.centerYAnchor.constraint(equalTo: progressTitleLabel.centerYAnchor),
+
+            progressBar.leadingAnchor.constraint(equalTo: progressPanel.leadingAnchor, constant: 18),
+            progressBar.trailingAnchor.constraint(equalTo: progressPanel.trailingAnchor, constant: -18),
+            progressBar.topAnchor.constraint(equalTo: progressTitleLabel.bottomAnchor, constant: 12),
+
+            contentCard.topAnchor.constraint(equalTo: progressPanel.bottomAnchor, constant: 14),
             contentCard.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 18),
             contentCard.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -18),
             contentCard.bottomAnchor.constraint(equalTo: actionBar.topAnchor, constant: -14),
@@ -223,6 +347,10 @@ final class SummaryWindowController: NSWindowController {
         subtitleLabel.stringValue = "Copy a thread URL, use the menu, or drag a link onto TS."
         statusLabel.stringValue = "Ready"
         progressIndicator.stopAnimation(nil)
+        progressBar.stopAnimation(nil)
+        progressPanel.isHidden = true
+        progressPanelHeightConstraint?.constant = 0
+        gaugeView.update(positive: 0, negative: 0, neutral: 0)
         savedPath = nil
         summaryText = ""
         render(text: "Ready.\n\nCopy a TigerDroppings thread URL, click the TS menu bar item, then choose Summarize Clipboard URL.")
@@ -233,6 +361,9 @@ final class SummaryWindowController: NSWindowController {
         subtitleLabel.stringValue = ""
         statusLabel.stringValue = "Notice"
         progressIndicator.stopAnimation(nil)
+        progressBar.stopAnimation(nil)
+        progressPanel.isHidden = true
+        progressPanelHeightConstraint?.constant = 0
         savedPath = nil
         summaryText = text
         render(text: text)
@@ -245,6 +376,12 @@ final class SummaryWindowController: NSWindowController {
         subtitleLabel.stringValue = url
         statusLabel.stringValue = "Working..."
         progressIndicator.startAnimation(nil)
+        progressPanel.isHidden = false
+        progressPanelHeightConstraint?.constant = 74
+        progressTitleLabel.stringValue = "Summarizing"
+        progressDetailLabel.stringValue = "Fetching thread and preparing the model run..."
+        progressBar.startAnimation(nil)
+        gaugeView.update(positive: 0, negative: 0, neutral: 0)
         savedPath = nil
         summaryText = ""
         render(text: "Summarizing...\n\n\(url)\n\nFetching thread pages, extracting posts, and generating the summary.")
@@ -262,15 +399,20 @@ final class SummaryWindowController: NSWindowController {
 
         let latestLine = trimmed.split(separator: "\n").last.map(String.init) ?? trimmed
         statusLabel.stringValue = latestLine
+        progressDetailLabel.stringValue = latestLine
     }
 
     func appendSummary(_ text: String) {
         summaryText += text
+        updateSentimentGauges(from: summaryText)
         render(text: summaryText)
     }
 
     func finish(success: Bool) {
         progressIndicator.stopAnimation(nil)
+        progressBar.stopAnimation(nil)
+        progressPanel.isHidden = true
+        progressPanelHeightConstraint?.constant = 0
         statusLabel.stringValue = success ? "Done" : "Failed"
         if !success && summaryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             render(text: "The summary failed. Check the terminal logs or try the CLI command directly.")
@@ -309,7 +451,34 @@ final class SummaryWindowController: NSWindowController {
     private func isSectionHeading(_ line: String) -> Bool {
         if line.isEmpty { return false }
         if line.hasSuffix(":") && line.count < 80 { return true }
-        return line.range(of: #"^[A-I]\.\s"#, options: .regularExpression) != nil
+        return line.range(of: #"^[A-J]\.\s"#, options: .regularExpression) != nil
+    }
+
+    private func updateSentimentGauges(from text: String) {
+        guard
+            let positive = firstPercent(after: "Positive", in: text),
+            let negative = firstPercent(after: "Negative", in: text),
+            let neutral = firstPercent(after: "Neutral", in: text)
+        else {
+            return
+        }
+        gaugeView.update(positive: positive, negative: negative, neutral: neutral)
+    }
+
+    private func firstPercent(after label: String, in text: String) -> Int? {
+        let pattern = "\(label)[^0-9]{0,20}([0-9]{1,3})%"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return nil
+        }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard
+            let match = regex.firstMatch(in: text, options: [], range: range),
+            match.numberOfRanges > 1,
+            let valueRange = Range(match.range(at: 1), in: text)
+        else {
+            return nil
+        }
+        return Int(text[valueRange])
     }
 
     @objc private func copySummary() {
