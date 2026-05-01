@@ -263,13 +263,110 @@ button {
   font-weight: 650;
 }
 
+.highlightPost {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid rgba(253, 219, 58, 0.18);
+  border-radius: 8px;
+  background: rgba(80, 9, 116, 0.18);
+}
+
+.highlightPostHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.highlightPostHeader div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.highlightPostHeader strong {
+  color: var(--lsu-gold);
+  font-size: 14px;
+}
+
+.highlightPostHeader div span {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.pagePill,
+.statPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.pagePill {
+  padding: 0 9px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+}
+
+.highlightStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.statPill {
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.statPill span {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.statPill.up {
+  color: var(--lsu-gold);
+}
+
+.statPill.down {
+  color: #ff757a;
+}
+
+.statPill.score {
+  color: #efeaf7;
+}
+
+.statPill.reply {
+  color: #c9a6e4;
+}
+
+.highlightPost p {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
 .spacer {
   height: 6px;
 }
 
 .actionBar {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 

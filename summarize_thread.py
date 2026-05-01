@@ -567,8 +567,6 @@ def format_post(post: Post) -> str:
         f"page={post.page}",
         f"user={post.username or 'unknown'}",
     ]
-    if post.post_id:
-        header_parts.append(f"post_id={post.post_id}")
     if post.timestamp:
         header_parts.append(f"time={post.timestamp}")
     if post.reply_to:
@@ -592,8 +590,6 @@ def format_engagement_post(post: Post) -> str:
         f"page={post.page}",
         f"user={post.username or 'unknown'}",
     ]
-    if post.post_id:
-        stats.append(f"post_id={post.post_id}")
     if post.upvotes is not None:
         stats.append(f"upvotes={post.upvotes}")
     if post.downvotes is not None:
@@ -657,7 +653,7 @@ def build_chunk_prompt(thread: ThreadData, chunk_text: str, chunk_number: int, c
         - Treat jokes, trolling, sarcasm, memes, and repeated running bits as meaningful signal.
         - Do not sanitize the tone into corporate blandness.
         - Do not summarize page by page.
-        - Preserve post numbers, users, pages, post IDs, upvotes, downvotes, vote score, and reply counts for posts that perform well or are high-signal.
+        - Preserve post numbers, users, pages, upvotes, downvotes, vote score, and reply counts for posts that perform well or are high-signal.
         - Treat high upvotes, high vote score, high reply count, and unusually high downvotes as useful engagement signals.
         - Note uncertainty if the chunk is noisy or context-dependent.
         - Keep it concise because this is an intermediate chunk summary.
@@ -697,7 +693,8 @@ def build_final_prompt(thread: ThreadData, chunk_summaries: List[str]) -> str:
         - Be honest about uncertainty or parsing gaps.
         - Do not produce a page-by-page recap.
         - Keep the output succinct: prioritize signal, avoid repeating the same point across sections.
-        - Highlight posts by post number/user/page/post ID when they have high upvotes, high vote score, high reply count, unusually high downvotes, or strong substance/humor.
+        - Highlight posts by post number/user/page when they have high upvotes, high vote score, high reply count, unusually high downvotes, or strong substance/humor.
+        - Do not include internal post_id values in the final summary.
         - Use real vote/reply stats when present. If stats are missing, say "inferred highlight" rather than implying real vote data.
         - Keep most bullets to one sentence.
 
@@ -711,7 +708,7 @@ def build_final_prompt(thread: ThreadData, chunk_summaries: List[str]) -> str:
         E. Most Common Explanations / Theories
         F. Thread Vibe
         G. Highlighted Posts
-           - 3 to 5 highlights using post number, user, page, post ID, upvotes, downvotes, vote score, reply count, and why it stood out
+           - 3 to 5 highlights using post number, user, page, upvotes, downvotes, vote score, reply count, and why it stood out
         H. Notable / High-Signal Moments
            - standout jokes, repeated bits, memes, trolling, or sharp observations
         I. Signal vs Noise

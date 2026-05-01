@@ -97,6 +97,65 @@ function SentimentGauge({ label, value, tone }: { label: string; value: number; 
   );
 }
 
+function parseHighlightedPost(line: string) {
+  const cleaned = normalizeMarkdownLine(line).replace(/^[-*]\s*/, '');
+  const match = cleaned.match(/^(.*?)\s+[—-]\s+(.*)$/);
+  const meta = match?.[1] ?? cleaned;
+  const reason = match?.[2] ?? '';
+  const parts = meta.split('|').map((part) => part.trim()).filter(Boolean);
+  const post = parts.find((part) => /^Post\s+\d+/i.test(part));
+  const page = parts.find((part) => /^page\s+\d+/i.test(part));
+  const user = parts.find((part) => part !== post && part !== page && !/^post_?id\b/i.test(part) && !/^(upvotes|downvotes|score|vote_score|replies)\b/i.test(part));
+  const readStat = (label: string) => {
+    const stat = parts.find((part) => new RegExp(`^${label}\\b`, 'i').test(part));
+    return stat?.replace(new RegExp(`^${label}\\s*=?\\s*`, 'i'), '') ?? '';
+  };
+
+  return {
+    post: post || 'Post',
+    user: user || 'Unknown user',
+    page: page || '',
+    upvotes: readStat('upvotes'),
+    downvotes: readStat('downvotes'),
+    score: readStat('score') || readStat('vote_score'),
+    replies: readStat('replies'),
+    reason,
+  };
+}
+
+function HighlightedPost({ line }: { line: string }) {
+  const post = parseHighlightedPost(line);
+  const stats = [
+    { label: 'Upvotes', icon: '↑', value: post.upvotes, className: 'up' },
+    { label: 'Downvotes', icon: '↓', value: post.downvotes, className: 'down' },
+    { label: 'Score', icon: '±', value: post.score, className: 'score' },
+    { label: 'Replies', icon: '↩', value: post.replies, className: 'reply' },
+  ].filter((stat) => stat.value !== '');
+
+  return (
+    <article className="highlightPost">
+      <div className="highlightPostHeader">
+        <div>
+          <strong>{post.post}</strong>
+          <span>{post.user}</span>
+        </div>
+        {post.page && <span className="pagePill">{post.page}</span>}
+      </div>
+      {stats.length > 0 && (
+        <div className="highlightStats">
+          {stats.map((stat) => (
+            <span className={`statPill ${stat.className}`} key={stat.label} title={stat.label}>
+              <span aria-hidden="true">{stat.icon}</span>
+              {stat.value}
+            </span>
+          ))}
+        </div>
+      )}
+      {post.reason && <p>{post.reason}</p>}
+    </article>
+  );
+}
+
 function SummaryBody({ text }: { text: string }) {
   const sections = useMemo(() => splitSections(text), [text]);
 
@@ -113,6 +172,9 @@ function SummaryBody({ text }: { text: string }) {
             {section.body.map((line, lineIndex) => {
               const trimmed = normalizeMarkdownLine(line);
               if (!trimmed) return <div className="spacer" key={lineIndex} />;
+              if (/^G\.\s+Highlighted Posts/i.test(section.heading) && /^[-*]\s*Post\s+\d+/i.test(trimmed)) {
+                return <HighlightedPost line={trimmed} key={lineIndex} />;
+              }
               if (/^[-*]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed)) {
                 return <p className="bulletLine" key={lineIndex}>{trimmed}</p>;
               }
