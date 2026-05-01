@@ -63,10 +63,20 @@ def load_env_file(path: Path = ENV_FILE) -> None:
 class Post:
     index: int
     page: int
+    post_id: Optional[str]
     username: Optional[str]
     timestamp: Optional[str]
     reply_to: Optional[str]
+    upvotes: Optional[int]
+    downvotes: Optional[int]
+    reply_count: Optional[int]
     text: str
+
+    @property
+    def vote_score(self) -> Optional[int]:
+        if self.upvotes is None and self.downvotes is None:
+            return None
+        return (self.upvotes or 0) - (self.downvotes or 0)
 
 
 @dataclass
@@ -272,7 +282,91 @@ def starts_time_marker(line: str) -> bool:
     return bool(re.match(r"^Posted on\b", line, flags=re.IGNORECASE))
 
 
+def parse_int_text(value: Optional[str]) -> Optional[int]:
+    if value is None:
+        return None
+    match = re.search(r"-?\d+", value.replace(",", ""))
+    if not match:
+        return None
+    return int(match.group(0))
+
+
+def parse_post_id_from_text_id(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    match = re.search(r"ptext_(\d+)", value)
+    return match.group(1) if match else None
+
+
+def extract_reply_count(post_row: BeautifulSoup) -> Optional[int]:
+    for link in post_row.select("a.rep-button"):
+        href = link.get("href", "")
+        if "s=4" not in href:
+            continue
+        text = link.get_text(" ", strip=True)
+        count = parse_int_text(text)
+        if count is not None:
+            return count
+    return None
+
+
+def parse_dom_posts_from_html(html: str, page_number: int, starting_index: int) -> List[Post]:
+    soup = BeautifulSoup(html, "html.parser")
+    posts: List[Post] = []
+    post_index = starting_index
+
+    for body_node in soup.select(".pText[id^='ptext_']"):
+        post_row = body_node.find_parent(class_=re.compile(r"\bmaincont1\b"))
+        if not post_row:
+            continue
+
+        post_id = parse_post_id_from_text_id(body_node.get("id"))
+        author_link = post_row.select_one(".author a.RegUser")
+        username = author_link.get_text(" ", strip=True) if author_link else None
+
+        time_node = post_row.select_one(".time")
+        timestamp = normalize_line(time_node.get_text(" ", strip=True)) if time_node else None
+
+        reply_link = post_row.select_one(".time a.PostInfo")
+        reply_to = reply_link.get_text(" ", strip=True) if reply_link else None
+
+        upvotes = None
+        downvotes = None
+        if post_id:
+            up_node = post_row.select_one(f"#T_Up_p{post_id}")
+            down_node = post_row.select_one(f"#T_Down_p{post_id}")
+            upvotes = parse_int_text(up_node.get_text(" ", strip=True) if up_node else None)
+            downvotes = parse_int_text(down_node.get_text(" ", strip=True) if down_node else None)
+
+        reply_count = extract_reply_count(post_row)
+        body = reduce_quote_duplication(body_node.get_text("\n", strip=True))
+        if not body:
+            continue
+
+        posts.append(
+            Post(
+                index=post_index,
+                page=page_number,
+                post_id=post_id,
+                username=username,
+                timestamp=timestamp,
+                reply_to=reply_to,
+                upvotes=upvotes,
+                downvotes=downvotes,
+                reply_count=reply_count,
+                text=body,
+            )
+        )
+        post_index += 1
+
+    return posts
+
+
 def parse_posts_from_html(html: str, page_number: int, starting_index: int) -> List[Post]:
+    dom_posts = parse_dom_posts_from_html(html, page_number, starting_index)
+    if dom_posts:
+        return dom_posts
+
     soup = BeautifulSoup(html, "html.parser")
     lines = [normalize_line(line) for line in soup.get_text("\n", strip=True).splitlines()]
     lines = [line for line in lines if line]
@@ -322,9 +416,13 @@ def parse_posts_from_html(html: str, page_number: int, starting_index: int) -> L
                 Post(
                     index=post_index,
                     page=page_number,
+                    post_id=None,
                     username=username,
                     timestamp=timestamp,
                     reply_to=reply_to,
+                    upvotes=None,
+                    downvotes=None,
+                    reply_count=None,
                     text=body,
                 )
             )
@@ -464,13 +562,80 @@ def format_post(post: Post) -> str:
         f"page={post.page}",
         f"user={post.username or 'unknown'}",
     ]
+    if post.post_id:
+        header_parts.append(f"post_id={post.post_id}")
     if post.timestamp:
         header_parts.append(f"time={post.timestamp}")
     if post.reply_to:
         header_parts.append(f"reply_to={post.reply_to}")
+    if post.upvotes is not None:
+        header_parts.append(f"upvotes={post.upvotes}")
+    if post.downvotes is not None:
+        header_parts.append(f"downvotes={post.downvotes}")
+    if post.vote_score is not None:
+        header_parts.append(f"vote_score={post.vote_score}")
+    if post.reply_count is not None:
+        header_parts.append(f"reply_count={post.reply_count}")
 
     header = " | ".join(header_parts)
     return f"[{header}]\n{post.text}"
+
+
+def format_engagement_post(post: Post) -> str:
+    stats = [
+        f"post={post.index}",
+        f"page={post.page}",
+        f"user={post.username or 'unknown'}",
+    ]
+    if post.post_id:
+        stats.append(f"post_id={post.post_id}")
+    if post.upvotes is not None:
+        stats.append(f"upvotes={post.upvotes}")
+    if post.downvotes is not None:
+        stats.append(f"downvotes={post.downvotes}")
+    if post.vote_score is not None:
+        stats.append(f"vote_score={post.vote_score}")
+    if post.reply_count is not None:
+        stats.append(f"reply_count={post.reply_count}")
+
+    excerpt = normalize_line(post.text.replace("\n", " "))
+    if len(excerpt) > 260:
+        excerpt = excerpt[:257].rstrip() + "..."
+    return f"- {' | '.join(stats)}\n  excerpt: {excerpt}"
+
+
+def build_engagement_snapshot(posts: List[Post], limit: int = 8) -> str:
+    def with_votes(post: Post) -> bool:
+        return post.upvotes is not None or post.downvotes is not None or post.reply_count is not None
+
+    voted_posts = [post for post in posts if with_votes(post)]
+    if not voted_posts:
+        return "No vote or reply-count metadata was extracted for this thread."
+
+    top_upvotes = sorted(voted_posts, key=lambda post: post.upvotes or 0, reverse=True)[:limit]
+    top_score = sorted(voted_posts, key=lambda post: post.vote_score if post.vote_score is not None else -10**9, reverse=True)[:limit]
+    top_replies = sorted(voted_posts, key=lambda post: post.reply_count or 0, reverse=True)[:limit]
+    most_downvoted = sorted(voted_posts, key=lambda post: post.downvotes or 0, reverse=True)[:limit]
+
+    sections = [
+        ("Most upvoted", top_upvotes),
+        ("Highest vote score", top_score),
+        ("Most replied-to", top_replies),
+        ("Most downvoted / controversial", most_downvoted),
+    ]
+
+    parts = []
+    for title, section_posts in sections:
+        meaningful = [
+            post
+            for post in section_posts
+            if (post.upvotes or 0) > 0 or (post.downvotes or 0) > 0 or (post.reply_count or 0) > 0
+        ]
+        if not meaningful:
+            continue
+        parts.append(title + ":\n" + "\n".join(format_engagement_post(post) for post in meaningful[:limit]))
+
+    return "\n\n".join(parts) if parts else "Vote and reply metadata was extracted, but all counts were zero."
 
 
 def build_chunk_prompt(thread: ThreadData, chunk_text: str, chunk_number: int, chunk_total: int) -> str:
@@ -487,7 +652,8 @@ def build_chunk_prompt(thread: ThreadData, chunk_text: str, chunk_number: int, c
         - Treat jokes, trolling, sarcasm, memes, and repeated running bits as meaningful signal.
         - Do not sanitize the tone into corporate blandness.
         - Do not summarize page by page.
-        - Preserve post numbers, users, and pages for posts that seem especially replied-to, quoted, funny, or high-signal.
+        - Preserve post numbers, users, pages, post IDs, upvotes, downvotes, vote score, and reply counts for posts that perform well or are high-signal.
+        - Treat high upvotes, high vote score, high reply count, and unusually high downvotes as useful engagement signals.
         - Note uncertainty if the chunk is noisy or context-dependent.
         - Keep it concise because this is an intermediate chunk summary.
 
@@ -497,7 +663,7 @@ def build_chunk_prompt(thread: ThreadData, chunk_text: str, chunk_number: int, c
         3. Repeated jokes / memes / trolling
         4. Complaints
         5. Explanations / theories
-        6. High-signal moments, with post numbers when available
+        6. High-signal / high-engagement moments, with post numbers and vote/reply stats when available
         7. Chunk limitations
 
         Thread chunk:
@@ -526,7 +692,8 @@ def build_final_prompt(thread: ThreadData, chunk_summaries: List[str]) -> str:
         - Be honest about uncertainty or parsing gaps.
         - Do not produce a page-by-page recap.
         - Keep the output succinct: prioritize signal, avoid repeating the same point across sections.
-        - Highlight posts by post number/user/page when they appear especially replied-to, quoted, referenced, funny, or high-signal. If true upvote counts are unavailable, say "inferred highlight" rather than implying real vote data.
+        - Highlight posts by post number/user/page/post ID when they have high upvotes, high vote score, high reply count, unusually high downvotes, or strong substance/humor.
+        - Use real vote/reply stats when present. If stats are missing, say "inferred highlight" rather than implying real vote data.
         - Keep most bullets to one sentence.
 
         Output exactly these sections:
@@ -539,11 +706,14 @@ def build_final_prompt(thread: ThreadData, chunk_summaries: List[str]) -> str:
         E. Most Common Explanations / Theories
         F. Thread Vibe
         G. Highlighted Posts
-           - 3 to 5 inferred highlights using post number, user, page, and why it stood out
+           - 3 to 5 highlights using post number, user, page, post ID, upvotes, downvotes, vote score, reply count, and why it stood out
         H. Notable / High-Signal Moments
            - standout jokes, repeated bits, memes, trolling, or sharp observations
         I. Signal vs Noise
         J. Key Takeaways
+
+        Engagement snapshot from extracted posts:
+        {build_engagement_snapshot(thread.posts)}
 
         Intermediate chunk summaries:
         {joined_chunks}

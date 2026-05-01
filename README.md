@@ -113,7 +113,7 @@ You should see progress messages like:
 - The script normalizes the thread URL and fetches page 1.
 - It inspects pagination and explicitly verifies the highest page number it can find.
 - It fetches every page through that verified last page.
-- It extracts posts using a practical text-pattern parser keyed off repeated `Posted by` / `Posted on` markers.
+- It extracts posts with a DOM-aware parser, including per-post upvotes, downvotes, vote score, and reply count when available.
 - It keeps jokes, sarcasm, trolling, and repeated bits as part of the dataset.
 - It lightly trims oversized quote blocks to reduce duplicated context.
 - If the thread is large, it summarizes in chunks and then combines those chunk summaries into one final structured summary.
@@ -128,15 +128,16 @@ The model is prompted to return:
 - `D. Most Common Complaints`
 - `E. Most Common Explanations / Theories`
 - `F. Thread Vibe`
-- `G. Notable / High-Signal Moments`
-- `H. Signal vs Noise`
-- `I. Key Takeaways`
+- `G. Highlighted Posts`
+- `H. Notable / High-Signal Moments`
+- `I. Signal vs Noise`
+- `J. Key Takeaways`
 
 ## Known limitations
 
 - This is a first-pass prototype, not a hardened scraper.
 - TigerDroppings may change its HTML structure, which could break extraction.
-- The parser currently relies on repeated text patterns from the rendered page, not a site-specific DOM contract.
+- The parser uses TigerDroppings DOM conventions and falls back to text patterns if those break.
 - If TigerDroppings blocks requests or serves different markup, you may need to add cookies, retries, or switch to Playwright later.
 - Quote trimming is intentionally conservative, but some duplicated context may still remain.
 - Very large threads can still lose nuance during chunking because the model sees summarized chunks instead of the entire raw thread at once.
