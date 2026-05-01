@@ -14,10 +14,10 @@ export type SummaryState = {
 const initialState: SummaryState = {
   mode: 'ready',
   title: 'TigerSummarizer',
-  subtitle: 'Copy a TigerDroppings thread URL, click TS, then summarize.',
+  subtitle: 'Copy a TigerDroppings thread URL, click TDS, then summarize.',
   status: 'Ready',
   summary:
-    'Ready.\n\nCopy a TigerDroppings thread URL, click the TS menu bar item, then choose Summarize Clipboard URL.',
+    'Ready.\n\nCopy a TigerDroppings thread URL, click the TDS menu bar item, then choose Summarize Clipboard URL.',
 };
 
 function postAction(action: string) {
@@ -135,7 +135,7 @@ export function App() {
     <main className="shell">
       <header className="topBar">
         <div className="brand">
-          <div className="badge">TS</div>
+          <div className="badge">TDS</div>
           <div>
             <h1>{state.title}</h1>
             <p>{state.subtitle}</p>

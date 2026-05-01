@@ -132,9 +132,9 @@ final class SummaryWindowController: NSWindowController, WKScriptMessageHandler,
         setWebState([
             "mode": "ready",
             "title": "TigerSummarizer",
-            "subtitle": "Copy a TigerDroppings thread URL, click TS, then summarize.",
+            "subtitle": "Copy a TigerDroppings thread URL, click TDS, then summarize.",
             "status": "Ready",
-            "summary": "Ready.\n\nCopy a TigerDroppings thread URL, click the TS menu bar item, then choose Summarize Clipboard URL.",
+            "summary": "Ready.\n\nCopy a TigerDroppings thread URL, click the TDS menu bar item, then choose Summarize Clipboard URL.",
         ])
     }
 
@@ -344,7 +344,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            button.title = "TS"
+            button.title = "TDS"
             button.toolTip = "Drop a TigerDroppings thread URL here, or use the menu."
 
             let overlay = DropOverlayView(frame: button.bounds)
@@ -398,7 +398,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let runner = "\(projectDir)/run_tigersummarizer.sh"
 
         summaryWindow.start(url: url)
-        statusItem.button?.title = "TS..."
+        statusItem.button?.title = "TDS..."
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: runner)
@@ -431,7 +431,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             stderr.fileHandleForReading.readabilityHandler = nil
             DispatchQueue.main.async {
                 self?.runningProcess = nil
-                self?.statusItem.button?.title = "TS"
+                self?.statusItem.button?.title = "TDS"
                 self?.summaryWindow.finish(success: finished.terminationStatus == 0)
             }
         }
@@ -441,7 +441,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try process.run()
         } catch {
             runningProcess = nil
-            statusItem.button?.title = "TS"
+            statusItem.button?.title = "TDS"
             summaryWindow.showMessage("Could not start TigerSummarizer.\n\n\(error)")
         }
     }
