@@ -88,13 +88,13 @@ The repo includes an early native macOS wrapper that runs the Python summarizer 
 Build it:
 
 ```bash
-swift build
+./scripts/package_menubar_app.sh
 ```
 
 Run it:
 
 ```bash
-.build/debug/TigerSummarizerMenuBar
+open -n build/TigerSummarizerMenuBar.app
 ```
 
 It adds a `TS` item to the macOS menu bar. Use `Summarize Clipboard URL` after copying a TigerDroppings thread link, or drag a URL onto the menu bar item. Results open in a local window and are also saved by the Python backend.
