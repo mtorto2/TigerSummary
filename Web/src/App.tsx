@@ -137,6 +137,8 @@ function parseHighlightedPost(line: string) {
   const meta = match?.[1] ?? cleaned;
   const rawReason = match?.[2] ?? '';
   const parts = meta.split('|').map((part) => part.trim()).filter(Boolean);
+  const compactVotes = meta.match(/(?:^|\|)\s*\+?(-?\d+)\s*\/\s*-?(\d+)\s*\((-?\d+)\)/);
+  const compactReplies = meta.match(/(?:^|\|)\s*(\d+)\s+repl(?:y|ies)\b/i);
   const postPart = parts.find((part) => /^Post\s*#?\s*\d+/i.test(part));
   const pagePart = parts.find((part) => /^page\s*=?\s*\d+/i.test(part));
   const normalizeUser = (value: string) => value
@@ -149,6 +151,8 @@ function parseHighlightedPost(line: string) {
       && normalized
       && !/^unknown(?:\s+user)?$/i.test(normalized)
       && !/^post_?id\b/i.test(part)
+      && !/^\+?-?\d+\s*\/\s*-?\d+\s*\(-?\d+\)$/i.test(part)
+      && !/^\d+\s+repl(?:y|ies)\b/i.test(part)
       && !/^(upvotes|downvotes|score|vote_score|vote score|replies|reply_count|reply count)\b/i.test(part);
   });
   const readStat = (labels: string[]) => {
@@ -166,6 +170,8 @@ function parseHighlightedPost(line: string) {
     .replace(/\bdownvotes?\s*[:=]?\s*-?\d+\s*\|?/gi, '')
     .replace(/\b(?:vote\s*score|vote_score|score)\s*[:=]?\s*-?\d+\s*\|?/gi, '')
     .replace(/\b(?:reply\s*count|reply_count|replies)\s*[:=]?\s*-?\d+\s*\|?/gi, '')
+    .replace(/\+?-?\d+\s*\/\s*-?\d+\s*\(-?\d+\)\s*\|?/g, '')
+    .replace(/\d+\s+repl(?:y|ies)\s*\|?/gi, '')
     .replace(/\s{2,}/g, ' ')
     .replace(/^\s*[|,;-]+\s*/, '')
     .trim();
@@ -174,10 +180,10 @@ function parseHighlightedPost(line: string) {
     post: postPart || 'Post',
     user: userPart ? normalizeUser(userPart) : '',
     page: pagePart?.replace(/^page\s*=?\s*/i, 'page ') ?? '',
-    upvotes: readStat(['upvotes', 'upvote']),
-    downvotes: readStat(['downvotes', 'downvote']),
-    score: readStat(['score', 'vote_score', 'vote score']),
-    replies: readStat(['replies', 'reply_count', 'reply count']),
+    upvotes: readStat(['upvotes', 'upvote']) || compactVotes?.[1] || '',
+    downvotes: readStat(['downvotes', 'downvote']) || compactVotes?.[2] || '',
+    score: readStat(['score', 'vote_score', 'vote score']) || compactVotes?.[3] || '',
+    replies: readStat(['replies', 'reply_count', 'reply count']) || compactReplies?.[1] || '',
     reason: stripMetricText(rawReason),
   };
 }
@@ -231,7 +237,7 @@ function SummaryBody({ text }: { text: string }) {
             {section.body.map((line, lineIndex) => {
               const trimmed = formatSectionLine(section.heading, line);
               if (!trimmed) return <div className="spacer" key={lineIndex} />;
-              if (/^G\.\s+Highlighted Posts/i.test(section.heading) && /^[-*]\s*Post\s+\d+/i.test(trimmed)) {
+              if (/^[A-J]\.\s+Highlighted Posts/i.test(section.heading) && /^[-*]\s*Post\s+\d+/i.test(trimmed)) {
                 return <HighlightedPost line={trimmed} key={lineIndex} />;
               }
               if (/^[-*]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed)) {
