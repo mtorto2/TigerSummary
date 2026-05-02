@@ -48,8 +48,8 @@ button {
 
 .topBar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 20px;
   align-items: center;
   min-height: 150px;
   padding: 16px 18px;
@@ -62,6 +62,10 @@ button {
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
+}
+
+.brand > div:last-child {
   min-width: 0;
 }
 
@@ -83,7 +87,9 @@ button {
   max-width: 100%;
   font-size: clamp(24px, 2.5vw, 36px);
   line-height: 1.12;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brand p {
@@ -98,6 +104,7 @@ button {
 .sentimentCard {
   display: grid;
   gap: 10px;
+  min-width: 0;
   padding: 14px;
   border-radius: 10px;
   background: rgba(10, 7, 14, 0.54);
@@ -385,11 +392,18 @@ button {
   filter: brightness(1.08);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .topBar {
     grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
+  .brand h1 {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 760px) {
   .sentimentPanel {
     grid-template-columns: 1fr;
   }

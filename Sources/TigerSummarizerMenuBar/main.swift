@@ -339,6 +339,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let summaryWindow = SummaryWindowController()
     private var runningProcess: Process?
 
+    private struct BackendRuntime {
+        let runnerURL: URL
+        let workingDirectoryURL: URL
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
@@ -395,16 +400,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let projectDir = SummaryWindowController.projectDirectory().path
-        let runner = "\(projectDir)/run_tigersummarizer.sh"
+        guard let backend = Self.backendRuntime() else {
+            summaryWindow.showMessage("Could not find the TigerDroppings Summarizer backend. Rebuild the app with ./scripts/package_menubar_app.sh.")
+            return
+        }
 
         summaryWindow.start(url: url)
         statusItem.button?.title = "TDS..."
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: runner)
-        process.arguments = [url, "--notify-projecthub"]
-        process.currentDirectoryURL = URL(fileURLWithPath: projectDir)
+        process.executableURL = backend.runnerURL
+        process.arguments = [
+            url,
+            "--notify-projecthub",
+            "--output-dir",
+            Self.summariesDirectoryURL().path,
+        ]
+        process.currentDirectoryURL = backend.workingDirectoryURL
+        process.environment = ProcessInfo.processInfo.environment.merging(["PYTHONUNBUFFERED": "1"]) { _, new in new }
 
         let stdout = Pipe()
         let stderr = Pipe()
@@ -445,6 +458,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             statusItem.button?.title = "TDS"
             summaryWindow.showMessage("Could not start TigerDroppings Summarizer.\n\n\(error)")
         }
+    }
+
+    private static func backendRuntime() -> BackendRuntime? {
+        let fileManager = FileManager.default
+        let bundledBackendURL = Bundle.main.resourceURL?.appendingPathComponent("backend")
+        let bundledRunnerURL = bundledBackendURL?.appendingPathComponent("run_tigersummarizer.sh")
+
+        if let bundledBackendURL,
+           let bundledRunnerURL,
+           fileManager.isExecutableFile(atPath: bundledRunnerURL.path) {
+            return BackendRuntime(
+                runnerURL: bundledRunnerURL,
+                workingDirectoryURL: bundledBackendURL
+            )
+        }
+
+        let projectDirectoryURL = SummaryWindowController.projectDirectory()
+        let projectRunnerURL = projectDirectoryURL.appendingPathComponent("run_tigersummarizer.sh")
+        if fileManager.isExecutableFile(atPath: projectRunnerURL.path) {
+            return BackendRuntime(
+                runnerURL: projectRunnerURL,
+                workingDirectoryURL: projectDirectoryURL
+            )
+        }
+
+        return nil
+    }
+
+    private static func summariesDirectoryURL() -> URL {
+        let applicationSupportURL = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first
+
+        return (applicationSupportURL ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support"))
+            .appendingPathComponent("TigerSummarizer")
+            .appendingPathComponent("Summaries")
     }
 }
 
